@@ -1,0 +1,335 @@
+<!-- 
+
+JAXON STEPHENS
+2.12.24
+DTC 477
+
+INTERACTIVE SITE PROJECT STATEMENT:
+
+The first step of this project was writing a prompt into ChatGPT to generate a basic starting point for the HTML and CSS. ChatGPT was able to set me up with a gameboard of 25 clickable squares and several different buttons for starting and ending the game. I was then able to focus on scripting and logic.
+
+The logical/sequential steps necessary for this game, as well as an explanation of how I achieved them are as follows:
+
+- Start the game with a button, make it last 30s and display the timer.
+    I achieved this with help from chatGPT, giving me a solid base to work out the rest of the scripting.
+
+- Every second, choose a random square to turn red.
+    I was able to make an array that is randomly parsed through to select squares each turn. I used conditional statements to ensure the same square wouldnt be picked twice in one turn (when there is both a blue and red square).
+
+- Allow clicking a colored square to give the user points. Give bonus points when the rules state.
+    I used conditional statements in a handleClick function in order to always accurately award the correct amount of points based on square color and difficulty.
+
+- Display the point total to the user in real time.
+    This function was easy to base off of the timer display.
+
+- After 15s, blue squares must also appear (separate from the red square).
+    I used a conditional statement in my core games loop that checks the time, if it is under 16s then it will begin displaying a blue square as well.
+
+- If the user presses the hard mode toggle button, toggle between different square reset speeds.
+    I made a function to change difficulty, it simply changes a value that is passed to the showRandomRedSquare function, which increases or decreases the time you have to click the square.
+
+- Track the users high score for their given session.
+    I used conditionals and a holder variable to check if a given score was the highest, then logged the score if so.
+
+
+ -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuickClick: The Game</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background-color: #D3D3D3;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(5, 80px);
+        grid-template-rows: repeat(5, 80px);
+        gap: 5px;
+        margin-top: 20px;
+        
+        border: solid, 5px, black;
+    }
+    .square {
+        width: 80px;
+        height: 80px;
+        background-color: #ddd;
+        cursor: pointer;
+    }
+    .red {
+        background-color: red !important;
+    }
+    .blue {
+        background-color: blue !important;
+    }
+
+    .gameText1 {
+      position: fixed;
+      bottom: 50vh;
+      left: 20vw;
+    }
+
+    .gameText2 {
+      position: fixed;
+      bottom: 40vh;
+      left: 20vw;
+    }
+
+    .gameText3 {
+      position: fixed;
+      bottom: 30vh;
+      left: 20vw;
+    }
+
+    .button1{
+      position: fixed;
+      bottom: 50vh;
+      right: 20vw;
+    }
+
+    .button2{
+      position: fixed;
+      bottom: 40vh;
+      right: 20vw;
+    }
+
+    .button3{
+      position: fixed;
+      bottom: 30vh;
+      right: 20vw;
+    }
+
+    h1 {
+        font-size: 30px;
+        display: flex;
+        top:20%;
+    }
+
+    .grid {
+        position:relative;   
+    }
+
+    .gameInfo {
+        position: relative;
+    }
+
+    ul{
+        text-align: left;
+    }
+
+</style>
+</head>
+
+
+<body>
+
+    <h1>QuickClick: The Game</h1>
+
+    <button class="button1" id="startBtn">Start Game</button>
+    <button class="button2" id="resetBtn">Reset Game</button>
+    <button class="button3" id="hardButton">Hard Mode (Toggle)</button>
+
+    <div class="gameText1" id="score">Score: 0</div>
+    <div class="gameText2" id="timer">Time Left: 30</div>
+    <div class="gameText3" id="highscore">Session High Score: 0</div>
+
+
+    <div class="grid">
+        <div class="square" data-index="0"></div>
+        <div class="square" data-index="1"></div>
+        <div class="square" data-index="2"></div>
+        <div class="square" data-index="3"></div>
+        <div class="square" data-index="4"></div>
+        <div class="square" data-index="5"></div>
+        <div class="square" data-index="6"></div>
+        <div class="square" data-index="7"></div>
+        <div class="square" data-index="8"></div>
+        <div class="square" data-index="9"></div>
+        <div class="square" data-index="10"></div>
+        <div class="square" data-index="11"></div>
+        <div class="square" data-index="12"></div>
+        <div class="square" data-index="13"></div>
+        <div class="square" data-index="14"></div>
+        <div class="square" data-index="15"></div>
+        <div class="square" data-index="16"></div>
+        <div class="square" data-index="17"></div>
+        <div class="square" data-index="18"></div>
+        <div class="square" data-index="19"></div>
+        <div class="square" data-index="20"></div>
+        <div class="square" data-index="21"></div>
+        <div class="square" data-index="22"></div>
+        <div class="square" data-index="23"></div>
+        <div class="square" data-index="24"></div>
+    </div>
+
+    <div>
+        <h2>HOW TO PLAY</h2>
+        <ul>
+        <li>Click the flashing red square to earn 1 point.</li>
+        <li>After 15 seconds, a blue square will also appear, worth 2 points.</li>
+        <li>Use the 'Hard Mode' toggle button and squares will dissapear faster, but be worth double the points.</li>
+        <li>You have 30 seconds to play, your highest score will be saved as long as your browser session is open.</li>
+        </ul>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameStarted = false;
+        let hardCheck = false; 
+        let gameTimer;
+        let secondsLeft = 30;
+        let difficulty = 1000 ;
+
+        const squares = document.querySelectorAll('.square');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const hardButton = document.getElementById('hardButton');
+        const highScoreDisplay = document.getElementById('highscore'); 
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+
+
+        function startGame() {
+            if (!gameStarted) {
+                gameStarted = true;
+                score = 0;
+                scoreDisplay.textContent = `Score: ${score}`;
+                secondsLeft = 30;
+                updateTimerDisplay();
+                gameTimer = setInterval(showRandomRedSquare, 1000);
+                updateTimerInterval = setInterval(updateTimer, 1000);
+            }
+        }
+
+        function showRandomRedSquare() {
+            //This section picks two random squares each turn, and makes sure they are not the same square.
+            var randomIndex = Math.floor(Math.random() * squares.length);
+            var randomIndexBlue = Math.floor(Math.random() * squares.length);
+            if(randomIndexBlue == randomIndex && randomIndexBlue != 25){
+                randomIndexBlue += 1 ;
+            } else if(randomIndexBlue == randomIndex){
+                randomIndexBlue -= 1 ;
+            }
+            var randomSquare = squares[randomIndex];
+            var randomSquareBlue = squares[randomIndexBlue];
+            randomSquare.classList.add('red');
+            
+
+            //Blue squares will appear after 15 seconds.
+            if(secondsLeft <= 16){
+                randomSquareBlue.classList.add('blue');
+            }
+
+            //Difficulty applies here with setTimeout().
+            setTimeout(() => {
+                randomSquare.classList.remove('red');
+                if(secondsLeft <= 16){
+                    randomSquareBlue.classList.remove('blue');
+                }
+            }, difficulty);
+        }
+
+
+        function endGame() {
+            gameStarted = false;
+            clearInterval(gameTimer);
+            clearInterval(updateTimerInterval);
+            alert(`Game Over! Your score is ${score}.`);
+         
+
+            //Tracking the session high score:
+            let currentScore = score;
+            let highScore = 0 ;
+            if(currentScore > highScore){
+                highScore = currentScore;
+                highScoreDisplay.textContent = `Session High Score: ${highScore}`;
+            }
+        }
+
+        function handleClick() {
+            //Assigning points. 1 point for red click, 2 for blue, double if hard mode is active.
+             if (this.classList.contains('red')) {
+                if(hardCheck==true){
+                    score+=2;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                }
+                else {
+                    score++;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                }
+
+
+            }
+            if (this.classList.contains('blue')) {
+                if(hardCheck==true){
+                    score+=4;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                }
+                else {
+                    score+=2;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                }
+            }
+        }
+
+        function resetGame() {
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            secondsLeft = 30;
+            updateTimerDisplay();
+            squares.forEach(square => {
+                square.classList.remove('red');
+                square.classList.remove('blue');
+                square.addEventListener('click', handleClick);
+            });
+        }
+
+        function updateTimer() {
+            secondsLeft--;
+            updateTimerDisplay();
+            if (secondsLeft === 0) {
+                endGame();
+            }
+        }
+
+        function updateTimerDisplay() {
+            timerDisplay.textContent = `Time Left: ${secondsLeft}`;
+        }
+
+
+        function hardMode() {
+
+            if(hardCheck == true){
+                difficulty = 1000;
+                hardCheck = false;
+            }else{
+                difficulty = 600;
+                hardCheck = true;
+            }
+        }
+
+        //Clickables:
+        startBtn.addEventListener('click', startGame);
+        hardButton.addEventListener('click', hardMode);
+        resetBtn.addEventListener('click', resetGame);
+        squares.forEach(square => {
+            square.addEventListener('click', handleClick);
+        });
+    </script>
+
+</body>
+</html>
+
+
+
